@@ -1,5 +1,6 @@
 """
 This file contains function for the ideal searcher which uses human fixations
+Authors: Yelda Semizer & Melchi M Michel
 """
 import ideal_observer_blocks as id_obs;
 import ideal_searcher_dyn_pyublas as isd;

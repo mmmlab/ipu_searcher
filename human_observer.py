@@ -1,5 +1,6 @@
 """
 This file contains functions to create a human Observer class with detection data
+Authors: Yelda Semizer & Melchi M Michel
 """
 import detection_blocks as db
 import scipy.optimize as opt

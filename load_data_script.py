@@ -1,5 +1,7 @@
-#this script was first created to merge subject data for VSS.
-
+"""
+This script reads in human and simulation data.
+Authors: Yelda Semizer & Melchi M Michel
+"""
 import shelve
 import search_blocks as sb
 

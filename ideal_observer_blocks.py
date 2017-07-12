@@ -1,5 +1,6 @@
 """
 This file contains class definitions for ideal observer simulation data
+Authors: Yelda Semizer & Melchi M Michel
 """
 import search_blocks as sb
 

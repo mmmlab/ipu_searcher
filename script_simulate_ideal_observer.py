@@ -1,5 +1,6 @@
 """
 This is the script for Simulation of the Ideal Observer
+Authors: Yelda Semizer & Melchi M Michel
 """
 import simulate_ideal_observer as sio;
 import search_blocks as sb;

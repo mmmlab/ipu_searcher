@@ -1,5 +1,6 @@
 """
 This file contains function to create a class for human search data
+Authors: Yelda Semizer & Melchi M Michel
 """
 import yaml
 import re

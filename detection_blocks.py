@@ -1,5 +1,6 @@
 """
 This file contains functions to create a class object for human detection data
+Authors: Yelda Semizer & Melchi M Michel
 """
 import scipy.optimize as opt
 from scipy.special import gammaln
