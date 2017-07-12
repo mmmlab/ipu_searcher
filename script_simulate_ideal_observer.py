@@ -18,7 +18,7 @@ human_blocks = sb.load_block_data(DATA_PATH);
 print '...finished loading human data successfully...';
 
 # Specify the noise type you want to simulate
-NOISE_TYPE = "notched"; #options: notched or pink
+NOISE_TYPE = "pink"; #options: notched or pink
 
 #Define a cond variable for each noise type
 if(NOISE_TYPE=="notched"): cond = 'nn';
