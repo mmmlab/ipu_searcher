@@ -41,7 +41,7 @@ start_time = time.strftime("%H:%M:%S");
 ideal_blocks = [];
 
 #hack
-current_blocks=[current_blocks[0]];
+#current_blocks=[current_blocks[0]];
 
 #iterate over each block
 for block in current_blocks:

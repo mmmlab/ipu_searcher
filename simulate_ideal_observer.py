@@ -14,8 +14,8 @@ import pyublas;
 from numpy import *
 
 # DEFINE CONSTANTS
-NR_TRIALS_SIMULATED = 1;#10; #number of simulated trials for each human trial
-PU_PARAMS = [0,1e-4];#[0.09,1e-4]; # to simulate ideal without intrinsic uncertainty set first value from 0.09 to 0. change to 0.0675 to to decrease by 0.25, to 0.045 to dec. by 0.5
+NR_TRIALS_SIMULATED = 10; #number of simulated trials for each human trial
+PU_PARAMS = [0.09,1e-4]; # to simulate ideal without intrinsic uncertainty set first value from 0.09 to 0. change to 0.0675 to to decrease by 0.25, to 0.045 to dec. by 0.5
 SQRT2PI_INV = 1.0/sqrt(2.0*pi);
 ASPECT_RATIO = 1.0;
 TINY = 1.0e-100;
