@@ -1,5 +1,7 @@
 """
-This file contains function for the ideal searcher which uses human fixations
+This file contains functions for the ideal observer which uses human fixations to complete an overt search task
+The background noise can be either pink or notched. Each background noise type has its own function to simulate a trial.
+
 Authors: Yelda Semizer & Melchi M Michel
 """
 import ideal_observer_blocks as id_obs;
@@ -14,16 +16,19 @@ from math import pi;
 import pyublas;
 from numpy import *
 
-# DEFINE CONSTANTS
-NR_TRIALS_SIMULATED = 10; #number of simulated trials for each human trial
-PU_PARAMS = [0.09,1e-4]; # to simulate ideal without intrinsic uncertainty set first value from 0.09 to 0. change to 0.0675 to to decrease by 0.25, to 0.045 to dec. by 0.5
+########################################################
+############## DEFINE CONSTANTS HERE ###################
+########################################################
+
+NR_TRIALS_SIMULATED = 1; #number of simulated trials for each human trial
+PU_PARAMS = [0.09,1e-4]; #to simulate ideal without intrinsic uncertainty set first value from 0.09 to 0.
 SQRT2PI_INV = 1.0/sqrt(2.0*pi);
 ASPECT_RATIO = 1.0;
 TINY = 1.0e-100;
 LARGE = 1.0e100;
 
 ########################################################
-###############DEFINE FUNCTIONS HERE####################
+############## DEFINE FUNCTIONS HERE ###################
 ########################################################
 
 def calculateThresholdFromPC(simulated_block,percent_correct):
@@ -148,44 +153,55 @@ def calculateSigmaPs(pu_params,targlocs,fixlocs):
 ########################################################
 
 def simulateDynamicIdealObserver(noise_type,current_block,p_threshold=0.99,targ_locs=None,fix_locs=None,locs=None):
-    # Current block is a block from human data, targ_locs is an array of possible target locations and fix_locs is
-    # and array of possible fixation locations 
-    # p_threshold: if p of MAP is equal or  greater than this value, ideal searcher will decide that target is found. 
-    # Search will quit when p_thresh=>.99
+    """
+    Current block is a block from human data, targ_locs is an array of possible target locations and fix_locs is
+    and array of possible fixation locations 
+    p_threshold: if p of MAP is equal or  greater than this value, ideal searcher will decide that target is found. 
+    Search will quit when p_thresh=>.99
+    STEPS:
+    #   1. Define global variables
+    #   2. Compute target radius depending on the background noise condition
+    #   3. Calculate covariance matrices (diag vectors) for each possible fixation location
+    #   4. Import the ideal block
+    #   5. Compute dprimes, etc.
+    #   6. Initialize trials to simulate
+    #   7. Calculate the 'matching' criterion for the simulated block
+    """
     
     global VS_FIXATION_LOCATIONS,VS_TARGET_LOCATIONS,LOCATIONS,TARGET_REGION_RADIUS,NOISE_TYPE;      
-        
+    
+    #   1. Define global variables
     VS_TARGET_LOCATIONS = targ_locs;
     VS_FIXATION_LOCATIONS = fix_locs;
     LOCATIONS = locs;
     NOISE_TYPE = noise_type;
         
-    # compute target radius
+    #   2. Compute target radius depending on the background noise condition
     if(NOISE_TYPE=='notched'):
         TARGET_REGION_RADIUS = 0.5*array([norm(el-VS_TARGET_LOCATIONS[0]) for el in VS_TARGET_LOCATIONS[1:]]).min();
     if(NOISE_TYPE=='pink'):
         TARGET_REGION_RADIUS = 0.5*array([norm(el-LOCATIONS[0]) for el in LOCATIONS[1:]]).min();
  
-    # Calculate covariance matrices (diag vectors) for each possible fixation location.  
-    #  In covariance_maps, the rows represent fixation locations and columns represent target locations.
-    #  The values are covariances.
+    #   3. Calculate covariance matrices (diag vectors) for each possible fixation location 
+    #   In covariance_maps, the rows represent fixation locations and columns represent target locations.
+    #   The values are covariances.
     covariance_maps = calculateCovariances(current_block,VS_TARGET_LOCATIONS,VS_FIXATION_LOCATIONS);
     if(NOISE_TYPE=='pink'):
         covariance_maps_pink = calculateCovariances(current_block,LOCATIONS,VS_FIXATION_LOCATIONS);
         
-    # 2. Unlike in the Matlab version, I'm going to do the trial simulations in
-    #   a separate subroutine
+    #   4. Import the ideal block
     ideal_block = id_obs.SimulatedBlock(current_block.observer);
     ideal_block.block_nr = current_block.block_nr;
     ideal_block.noise_contrast = current_block.noise_contrast;
     ideal_block.signal_contrast = current_block.signal_contrast;
 
-    #Lines below added to compute the new uncertainty effect for dprimes
+    #   5. Compute dprimes, etc.
     dprimes = 1.0/sqrt(covariance_maps);
     sigma_ps_matrix = calculateSigmaPs(PU_PARAMS,VS_TARGET_LOCATIONS,VS_FIXATION_LOCATIONS);
     effective_k = calculateEffectiveK(sigma_ps_matrix,TARGET_REGION_RADIUS);
     dprime_unc_effect = dprime_uncertainty_effect(dprimes,effective_k);     
     
+    #   6. Initialize trials to simulate
     trials = [];
     trials_count = 0;
     for current_trial in current_block.trials:
@@ -201,8 +217,8 @@ def simulateDynamicIdealObserver(noise_type,current_block,p_threshold=0.99,targ_
     
     NR_TARG_LOCATIONS = len(VS_TARGET_LOCATIONS);
     
-    # Now calculate the 'matching' criterion for this block: here we set ideal observer's accuracy
-    # to human observer's accuracy and compute the threshold required to reach that accuracy backwards.
+    #   7. Calculate the 'matching' criterion for this block: here we set ideal observer's accuracy
+    #   to human observer's accuracy and compute the threshold required to reach that accuracy backwards.
     criterion = calculateThresholdFromPC(ideal_block,clip(current_block.accuracy(),1.0/NR_TARG_LOCATIONS,1.0-1e-3));
     ideal_block.p_threshold = criterion;
     ideal_block.poss_targ_locs = VS_TARGET_LOCATIONS;
@@ -211,22 +227,33 @@ def simulateDynamicIdealObserver(noise_type,current_block,p_threshold=0.99,targ_
     return ideal_block;
 
 ##################################################################################################
-#Function to simulate an ideal trial for NOTCHED noise using human fixations
-def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_unc_effect,sigma_ps_matrix):
-    print '...entering trial...'
 
+def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_unc_effect,sigma_ps_matrix):
+    """
+    This function simulates an ideal trial for NOTCHED noise using human fixations
+    STEPS:
+    #   1. Define target related variables
+    #   2. Initialize fixation count
+    #   3. Calculate first fixation index (should be in the center, but it does vary)
+    #   4. Initialize variables (i.e., updates for t=0)
+    #   5. Set up arrays (to store values)
+    #   6. Simulate each trial
+    #   7.  Save simualted data to a structure 
+    """
+    
+    print '...entering trial...'
+    #   1. Define target related variable
     target_found = False;
     targ_idx = findNearestIndex(current_trial.target_location,VS_TARGET_LOCATIONS);
    
-    #   1. Initialize fixation count
+    #   2. Initialize fixation count
     fixation_count = 1;
     
-    #   2. Calculate first fixation index (should be in the center, but it does vary)
+    #   3. Calculate first fixation index (should be in the center, but it does vary)
     #      This is significant if the subject do not start from the center.
     fixations = [findNearestIndex(current_trial.fixation_locations[0,:],VS_FIXATION_LOCATIONS)];
 
-    #   3. Initialize variables (i.e., updates for t=0)
-    
+    #   4. Initialize variables (i.e., updates for t=0)
     #  Cov is the vector of variances across all target locations given the current
     #  fixation location
     #print '...computing covariances and dprimes...'    
@@ -260,17 +287,16 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
     p_Wts = p_Wt;
     p_T = p_Wt/sum(p_Wt); # posterior
     
-    #   4. Set up arrays (to store values)
+    #   5. Set up arrays (to store values)
     posteriors = [];
     target_posteriors = [p_T[targ_idx]];
     max_posteriors = [p_T.max()];
     max_indices = [p_T.argmax()];
-    
-    ###### code for simulation human fixations#######
     nr_fix_current_trial = len(current_trial.fixation_locations);
     # not the first fixation, we already used it.
     next_fixations = [findNearestIndex(current_trial.fixation_locations[i,:],VS_FIXATION_LOCATIONS) for i in range(nr_fix_current_trial)][1:];
     
+    #   6. Simulate each trial
     for i in range(nr_fix_current_trial-1): # -1 because it already made the first fixation.
         posteriors.append(p_T);
         if(p_T.max()>p_threshold):
@@ -302,7 +328,8 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
             max_posteriors.append(p_T.max());
             max_indices.append(p_T.argmax());
             target_posteriors.append(p_T[targ_idx]);
-    # Save simualted data to a structure        
+            
+    #   7. Save simualted data to a structure        
     ideal_trial = id_obs.SimulatedTrial();
     ideal_trial.target_location_idx = targ_idx;
     ideal_trial.fixation_locations = array([VS_FIXATION_LOCATIONS[f] for f in fixations]);
@@ -317,24 +344,36 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
     return ideal_trial;
 
 ##################################################################################################
-#Function to simulate an ideal trial for PINK noise using human fixations
-def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_maps,p_threshold,dprime_unc_effect,sigma_ps_matrix):
-    print '...entering trial...'
 
+def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_maps,p_threshold,dprime_unc_effect,sigma_ps_matrix):
+    
+    """
+    This function simulates an ideal trial for PINK noise using human fixations
+    STEPS:
+    #   1. Define target related variables
+    #   2. Initialize fixation count
+    #   3. Calculate first fixation index (should be in the center, but it does vary)
+    #   4. Initialize variables (i.e., updates for t=0)
+    #   5. Set up arrays (to store values)
+    #   6. Simulate each trial
+    #   7.  Save simualted data to a structure 
+    """
+    
+    print '...entering trial...'
+    #   1. Define target related variables 
     target_found = False;
     targ_idx = findNearestIndex(current_trial.target_location,VS_TARGET_LOCATIONS);
     targ_loc_idx = findNearestIndex(current_trial.target_location,LOCATIONS); 
     list_of_indices = array([findNearestIndex(point,LOCATIONS) for point in VS_TARGET_LOCATIONS]);
-    # To Do:
-    #   1. Initialize fixation count
+
+    #   2. Initialize fixation count
     fixation_count = 1;
     
-    #   2. Calculate first fixation index (should be in the center, but it does vary)
+    #   3. Calculate first fixation index (should be in the center, but it does vary)
     #      This is significant if the subject do not start from the center.
     fixations = [findNearestIndex(current_trial.fixation_locations[0,:],VS_FIXATION_LOCATIONS)];
     
-    #   3. Initialize variables (i.e., updates for t=0)
-    
+    #   4. Initialize variables (i.e., updates for t=0)
     #  Cov is the vector of variances across all target locations given the current
     #  fixation location
     #print '...computing covariances and dprimes...'    
@@ -368,20 +407,17 @@ def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_
     p_Wts = p_Wt;
     p_T = p_Wt/sum(p_Wt); # posterior
     
-    #   4. Set up arrays (to store values)
+    #   5. Set up arrays (to store values)
     posteriors = [];
     target_posteriors = [p_T[targ_idx]];
     max_posteriors = [p_T.max()];
     max_indices = [p_T.argmax()];
-
-    ###### code for simulation human fixations#######
     nr_fix_current_trial = len(current_trial.fixation_locations);
     # not the first fixation, we already used it.
     next_fixations = [findNearestIndex(current_trial.fixation_locations[i,:],VS_FIXATION_LOCATIONS) for i in range(nr_fix_current_trial)][1:];
     
+    #   6. Simulate each trial
     for i in range(nr_fix_current_trial-1): # -1 because it already made the first fixation.
-    
-#    while(not target_found):
         posteriors.append(p_T);
         if(p_T.max()>p_threshold):
             target_found = True;    
@@ -411,7 +447,8 @@ def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_
             max_posteriors.append(p_T.max());
             max_indices.append(p_T.argmax());
             target_posteriors.append(p_T[targ_idx]);
-    # Save simualted data to a structure      
+            
+    #   7.  Save simualted data to a structure      
     ideal_trial = id_obs.SimulatedTrial();
     ideal_trial.target_location_idx = targ_idx;
     ideal_trial.fixation_locations = array([VS_FIXATION_LOCATIONS[f] for f in fixations]);

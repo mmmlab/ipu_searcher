@@ -5,6 +5,8 @@
 *.dat
 *.pyc
 *.py~
+*.txt~
+*.gitignore~
 *.jpg
 *.png
 *.mat
