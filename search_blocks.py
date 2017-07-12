@@ -2,14 +2,14 @@
 This file contains function to create a class for human search data
 Authors: Yelda Semizer & Melchi M Michel
 """
+import human_observer as obs
+import numpy as np
+import pylab as pl
+import os.path
 import yaml
 import re
-import human_observer as obs
-import os.path
 from numpy.linalg.linalg import norm
-from numpy import concatenate,array,shape,mean,median
 from glob import glob
-from pylab import sum,all
 
 FIXATION_THRESH = 1.0;
 
@@ -28,7 +28,7 @@ def load_block_data(pathname):
     ids = unique([block.id for block in blocks]);
     combined_blocks = [];
     for id in ids:
-        blk = sum([block for block in blocks if all(block.id==id)]);
+        blk = pl.sum([block for block in blocks if pl.all(block.id==id)]);
         combined_blocks.append(blk);
     return combined_blocks;
 
@@ -44,7 +44,7 @@ class SearchTrial():
         self.fixation_durations = fix[:,2:];   
 
     def getNrFixations(self):
-        return shape(self.fixations)[0];
+        return np.shape(self.fixations)[0];
         
     def getAccuracy(self):
         return norm(self.indicated_location_coords-self.target_location)<FIXATION_THRESH;
@@ -146,23 +146,23 @@ class SearchBlock():
 
         # This takes care of building each of the trials
         for tloc,iloc,res,time,fix,seed in zip(targ_locs,ind_locs,results,search_times,fixations,seeds):
-            trial = SearchTrial(array(tloc),array(iloc),res,time,array(fix,ndmin=2),seed); # here ndmin reshapes the fix so that we have at least 2 values
+            trial = SearchTrial(np.array(tloc),np.array(iloc),res,time,np.array(fix,ndmin=2),seed); # here ndmin reshapes the fix so that we have at least 2 values
             self.trials.append(trial);
         
     def getAccuracies(self):
-        return array([trial.getAccuracy() for trial in self.trials]);
+        return np.array([trial.getAccuracy() for trial in self.trials]);
         
     def accuracy(self):
-        return mean(self.getAccuracies());
+        return np.mean(self.getAccuracies());
     
     def getFixationCounts(self):
-        return array([trial.getNrFixations() for trial in self.trials]);
+        return np.array([trial.getNrFixations() for trial in self.trials]);
         
     def medianFixationCount(self):
-        return median(self.getFixationCounts());
+        return np.median(self.getFixationCounts());
         
     def getSearchTimes(self):
-        return array([trial.search_time for trial in self.trials]);
+        return np.array([trial.search_time for trial in self.trials]);
     
     def get_nr_trials(self):
         return len(self.trials);

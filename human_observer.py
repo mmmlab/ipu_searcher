@@ -5,8 +5,8 @@ Authors: Yelda Semizer & Melchi M Michel
 import detection_blocks as db
 import scipy.optimize as opt
 from scipy import stats
-from numpy import arange,exp,sqrt,array,arctan2,interp
-from math import pi;
+import numpy as np
+import math as mt
 
 global fileroot;
 
@@ -16,7 +16,7 @@ fileroot = './detection_data';
 def psyWeib(x,thresh,slope,guess=0.5,lapse=0.01):
     # Psychometric Weibull function
     # returns the probability of being correct for stimulus value x
-    return guess+(1-guess-lapse)*(1-exp(-(x/thresh)**slope))
+    return guess+(1-guess-lapse)*(1-np.exp(-(x/thresh)**slope))
 
 def invPsyWeib(p,thresh,slope,guess=0.5,lapse=0.01):
     logterm = 1-(p-guess)/(1-guess-lapse);
@@ -24,15 +24,15 @@ def invPsyWeib(p,thresh,slope,guess=0.5,lapse=0.01):
 
 def DPrimeFromPC_2AFC(p):
     # Note: isf(p) = cdf(1-p)
-    return sqrt(2)*stats.norm.ppf(p);
+    return np.sqrt(2)*stats.norm.ppf(p);
 
 def PCFromDPrime_2AFC(d):
-    return stats.norm.cdf(d/sqrt(2));
+    return stats.norm.cdf(d/np.sqrt(2));
 
 def computeFitThresh(ecc,fov_thresh,tau_theta):
     # returns threshold 
     # tau_theta: as a function of ecc how the threshold changes in each direction
-    threshold = fov_thresh*exp(tau_theta*ecc);
+    threshold = fov_thresh*np.exp(tau_theta*ecc);
     return threshold;
 
 def getConditionedPsyLikes(blocks,slope,fov_thresh,tau_theta,idx):
@@ -49,10 +49,10 @@ def computeTauThetas(blocks,slope,fov_thresh):
     # returns tau_theta which minimizes the nll hence max the pll(probability of the data given the model. it gives the best fit parameter) 
     tau_min = 0.0;
     tau_max = 1.0;
-    idx = arange(1,9);
+    idx = np.arange(1,9);
     tau_thetas = [opt.fminbound(lambda u:getConditionedPsyLikes(blocks,slope,fov_thresh,u,i),tau_min,tau_max,disp=False) for i in idx];    
     tau_thetas.append(tau_thetas[0]);
-    return array(tau_thetas); 
+    return np.array(tau_thetas); 
  
 class Observer():
     def __init__(self,subid):
@@ -68,12 +68,12 @@ class Observer():
     def threshold(self,x,y):
         # this function is a combination of computeThresh and interpolation functions in detection_blocks_yelda
         # unlike the interpolation here we compute rho rather than degree
-        ecc = sqrt(x**2+y**2); # eccentricity (you can use norm too)
+        ecc = np.sqrt(x**2+y**2); # eccentricity (you can use norm too)
         # compute nearest spoke (theta) index
-        theta = arctan2(y,x);
-        theta+=(theta<0)*2*pi;
-        theta_idx = array(4*theta/pi);
-        tau_t = interp(theta_idx,arange(0.,9.),self.tau_thetas); #thresh_slope 
+        theta = np.arctan2(y,x);
+        theta+=(theta<0)*2*mt.pi;
+        theta_idx = np.array(4*theta/mt.pi);
+        tau_t = np.interp(theta_idx,np.arange(0.,9.),self.tau_thetas); #thresh_slope 
         return computeFitThresh(ecc,self.fov_thresh,tau_t);        
         
     def contrast(self,x,y,d):

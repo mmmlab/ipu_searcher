@@ -3,13 +3,13 @@ This file contains functions to create a class object for human detection data
 Authors: Yelda Semizer & Melchi M Michel
 """
 import scipy.optimize as opt
-from scipy.special import gammaln
-from numpy import array,squeeze,unique,log,exp,mean
-from glob import glob
+import numpy as np
+import pylab as pl
 import yaml
 import os.path
 import time
-from pylab import double,all
+from scipy.special import gammaln
+from glob import glob
 
 # this marks the modification time of earliest block that I want to read in.
 default_earliest_time = time.mktime(time.strptime("1 Apr 13", "%d %b %y"));
@@ -29,14 +29,14 @@ def list_unique(seq):
 ## Generic Fitting Procedures
 def psyWeib(x,t,s,lapse=0.01,guess=0.5):
     # returns the psychometric function
-    return guess+(1-lapse-guess)*(1-exp(-(x/t)**s));
+    return guess+(1-lapse-guess)*(1-np.exp(-(x/t)**s));
     
 def invPsyWeib(p,t,s):
-    return t*(-log(2-2*p))**(1/s);
+    return t*(-np.log(2-2*p))**(1/s);
 
 def logBinomPMF(k,n,p):
     log_coeff = gammaln(n+1)-gammaln(k+1)-gammaln(n-k+1);
-    return log_coeff+k*log(p)+(n-k)*log(1-p);
+    return log_coeff+k*np.log(p)+(n-k)*np.log(1-p);
 
 def weibLike(x,k,n,thresh,slope,lapse=0.01):
     # Returns the negative log likelihood of obtaining the observed k given the stimulus
@@ -55,7 +55,7 @@ def weibFit(x,k,n,fixed_slope=None):
         params = opt.fmin(lambda u:weibLike(x,k,n,u[0],u[1]),[thresh_init,slope_init],disp=False);
     else:
         thresh = opt.fmin(lambda u:weibLike(x,k,n,u,fixed_slope),thresh_init,disp=False)[0];
-        params = array([thresh,fixed_slope]);
+        params = np.array([thresh,fixed_slope]);
     return params;
     
 def getSlopeConditionedPsyLikes(blocks,slope,loc_idx=None):
@@ -63,7 +63,7 @@ def getSlopeConditionedPsyLikes(blocks,slope,loc_idx=None):
     #thresh_pval = 0.816
     for block in blocks:
         x,k,n = block.computePerformance(loc_idx);
-        thresh_init = mean(x);
+        thresh_init = np.mean(x);
         thresh = opt.fminbound(lambda u:weibLike(x,k,n,u,slope),x.min(),x.max(),disp=False)
         like.append(weibLike(x,k,n,thresh,slope))
     return sum(like)
@@ -145,7 +145,6 @@ class GDTrial():
 class GDBlock():
     def __init__(self,bdata=None):
         if(bdata):
-            # To Do: add spatial frequency, including to id
             self.target_sf = bdata['stimulus_params']['targetFrequency']; # temporary hack
             try:
                 self.target_ecc = bdata['stimulus_params']['locRadius'];
@@ -155,7 +154,6 @@ class GDBlock():
             self.nr_trials = bdata['stimulus_params']['numberTrials'];
             self.trials = self.getTrials(bdata['trial_params']);
             self.date = bdata['date'];
-            #self.test_contrasts = sorted(unique([trial.target_contrast for trial in self.trials]));
             self.id = (self.target_ecc,self.target_sf,self.noise_contrast);
         else:
             self.target_sf = None;
@@ -174,7 +172,6 @@ class GDBlock():
         gd.nr_trials=self.nr_trials;
         gd.trials=self.trials;
         gd.date=self.date;
-        #gd.test_contrasts=self.test_contrasts;
         gd.id=self.id;
         return gd;
 
@@ -184,10 +181,8 @@ class GDBlock():
     def __iadd__(self,other):
         if(self.id==None):
             self.id = other.id;
-        if(all(self.id==other.id)):
+        if(pl.all(self.id==other.id)):
             self.trials+=other.trials;
-#            contrasts = unique(list(self.test_contrasts)+list(other.test_contrasts));
- #           self.test_contrasts = sorted(contrasts);
             self.nr_trials = len(self.trials);
         else:
            print "\nERROR: cannot concatenate blocks with differing parameters!\n" 
@@ -222,8 +217,7 @@ class GDBlock():
         subdict['results'] = tdata['results'];
         
         dict_keys = subdict.keys();
-        dict_vals = array([squeeze(vals) for vals in subdict.values()]).T;
-        #nr_trials = len(dict_vals);
+        dict_vals = np.array([np.squeeze(vals) for vals in subdict.values()]).T;
         trials = [GDTrial(dict(zip(dict_keys,vals))) for vals in dict_vals];
         return trials;
     
@@ -232,18 +226,17 @@ class GDBlock():
             trials = self.trials
         else:
             trials = [trial for trial in self.trials if (trial.target_index==idx)];
-            #trials = [trial for trial in self.trials if trial.target_index in list(idx)];
-        trial_types = sorted(unique([round(trial.target_contrast,round_prec) for trial in trials]));
+        trial_types = sorted(np.unique([round(trial.target_contrast,round_prec) for trial in trials]));
         scores = [[] for i in trial_types];
         for trial in trials:
             for i,trial_type in enumerate(trial_types):
                 if(round(trial.target_contrast,round_prec)==trial_type):
                     scores[i].append(trial.score);
-        ks = array([sum(el) for el in scores]);
-        ns = array([len(el) for el in scores]);
+        ks = np.array([sum(el) for el in scores]);
+        ns = np.array([len(el) for el in scores]);
         xs = trial_types;
-        ps = ks/double(ns);
-        return array([xs,ks,ns]);
+        ps = ks/pl.double(ns);
+        return np.array([xs,ks,ns]);
         
     def plotPerformance(self,idx=None,fixed_slope=None):
         x,k,n = self.computePerformance(idx,round_prec=4);
@@ -251,14 +244,14 @@ class GDBlock():
         # Now estimate lapse rate by computing 99% threshold and computing the proportion
         # of errors made at contrasts above that threshold
         t99 = invPsyWeib(.99,thresh,slope);
-        if t99<max(x): # edit 4/27/15 here we check whether any of the contrast is larger than t99 to control for weird lapse rate.
+        if t99<max(x): 
             lapse_rate = 0.0
         else:
             lapse_rate = 1.0-float(sum((x>t99)*k))/sum((x>t99)*n);
         # For plotting purposes, recompute performance parameters after rounding contrasts
         # to nearest percent.
         x,k,n = self.computePerformance(idx,round_prec=2);
-        p = double(k)/n;
+        p = pl.double(k)/n;
         
         fig = figure();
         if(idx!=None):
@@ -275,13 +268,13 @@ class GDBlock():
         ax1.text(0.38,0.58,r'$\hat{\beta}$' +' = %2.2f'%slope);
         ax1.text(0.38,0.51,r'$\hat{\lambda}$' +' = %2.3f'%lapse_rate);
         ax1.text(0.38,0.44,r'$n$' +' = %2.0f'%sum(n));
-        ylim = array(ax1.get_ylim());
+        ylim = np.array(ax1.get_ylim());
         ax1.vlines([thresh,t99],ylim.min(),ylim.max(),colors=['k','0.5'],linestyles='dashed');
         ax1.text(thresh+0.01,0.41,r'$c_{\ 0.82}$' +' = %2.2f'%thresh);
         ax1.text(t99+0.01,0.50,r'$c_{\ 0.99}$' +' = %2.2f'%t99,color='0.5');
         
         ax2.bar(x-0.01,n,0.01);
-        ylim = array(ax2.get_ylim());
+        ylim = np.array(ax2.get_ylim());
         ax2.vlines(thresh,ylim.min(),ylim.max(),colors = 'k',linestyles='dashed');
         ax2.set_xlim(0,0.5);
         ax2.set_ylabel('Contrast freq.');

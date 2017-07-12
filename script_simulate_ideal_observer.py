@@ -19,7 +19,7 @@ STEPS:
 
 import simulate_ideal_observer as sio;
 import search_blocks as sb;
-from numpy import loadtxt;
+import numpy as np;
 import shelve;
 import time;
 
@@ -45,7 +45,7 @@ current_blocks = [block for block in human_blocks if block.cue_condition==cond];
 # 6. Define functions to load target locations and to write dat files
 def loadLocs(loc_path,nr_locs):
     '''This function loads txt files which contain possible target locations'''
-    return loadtxt(loc_path+'/loc'+str(nr_locs)+'.txt');
+    return np.loadtxt(loc_path+'/loc'+str(nr_locs)+'.txt');
 
 def writeDatFile(dbname,blocks,cond):
     '''This function writes blocks into a dat file'''
@@ -64,9 +64,6 @@ print '...starting the simulation...';
 start_date = time.strftime("%Y%m%d");
 start_time = time.strftime("%H:%M:%S");
 ideal_blocks = [];
-
-#hack
-#current_blocks=[current_blocks[0]];
 
 # 7.2. Iterate over each block and simulate the ideal observer
 for block in current_blocks:

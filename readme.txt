@@ -49,11 +49,9 @@ in either pink or notched noise background, depending on the specified noise typ
 
 -detection_blocks.py: contains class definitions and psychometric functions to load and process human detection data.
 
+-search_blocks.py: contains functions to load human search data into a class.
+
 -human_observer.py: contains a class object with human detection performance.
 
 -ideal_blocks.py: contains a class object to structure simulation blocks from the ideal observer.
-
--load_data_script.py: reads in human and simulation data.
-
--search_blocks.py: contains functions to load human search data into a class.
 
