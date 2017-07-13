@@ -3,11 +3,11 @@ This file contains functions to create a class object for human detection data
 Authors: Yelda Semizer & Melchi M Michel
 """
 import scipy.optimize as opt
-import numpy as np
 import pylab as pl
 import yaml
 import os.path
 import time
+import matplotlib.pyplot as plt
 from scipy.special import gammaln
 from glob import glob
 
@@ -29,14 +29,14 @@ def list_unique(seq):
 ## Generic Fitting Procedures
 def psyWeib(x,t,s,lapse=0.01,guess=0.5):
     # returns the psychometric function
-    return guess+(1-lapse-guess)*(1-np.exp(-(x/t)**s));
+    return guess+(1-lapse-guess)*(1-pl.exp(-(x/t)**s));
     
 def invPsyWeib(p,t,s):
-    return t*(-np.log(2-2*p))**(1/s);
+    return t*(-pl.log(2-2*p))**(1/s);
 
 def logBinomPMF(k,n,p):
     log_coeff = gammaln(n+1)-gammaln(k+1)-gammaln(n-k+1);
-    return log_coeff+k*np.log(p)+(n-k)*np.log(1-p);
+    return log_coeff+k*pl.log(p)+(n-k)*pl.log(1-p);
 
 def weibLike(x,k,n,thresh,slope,lapse=0.01):
     # Returns the negative log likelihood of obtaining the observed k given the stimulus
@@ -55,7 +55,7 @@ def weibFit(x,k,n,fixed_slope=None):
         params = opt.fmin(lambda u:weibLike(x,k,n,u[0],u[1]),[thresh_init,slope_init],disp=False);
     else:
         thresh = opt.fmin(lambda u:weibLike(x,k,n,u,fixed_slope),thresh_init,disp=False)[0];
-        params = np.array([thresh,fixed_slope]);
+        params = pl.array([thresh,fixed_slope]);
     return params;
     
 def getSlopeConditionedPsyLikes(blocks,slope,loc_idx=None):
@@ -63,7 +63,7 @@ def getSlopeConditionedPsyLikes(blocks,slope,loc_idx=None):
     #thresh_pval = 0.816
     for block in blocks:
         x,k,n = block.computePerformance(loc_idx);
-        thresh_init = np.mean(x);
+        thresh_init = pl.mean(x);
         thresh = opt.fminbound(lambda u:weibLike(x,k,n,u,slope),x.min(),x.max(),disp=False)
         like.append(weibLike(x,k,n,thresh,slope))
     return sum(like)
@@ -217,7 +217,7 @@ class GDBlock():
         subdict['results'] = tdata['results'];
         
         dict_keys = subdict.keys();
-        dict_vals = np.array([np.squeeze(vals) for vals in subdict.values()]).T;
+        dict_vals = pl.array([pl.squeeze(vals) for vals in subdict.values()]).T;
         trials = [GDTrial(dict(zip(dict_keys,vals))) for vals in dict_vals];
         return trials;
     
@@ -226,17 +226,17 @@ class GDBlock():
             trials = self.trials
         else:
             trials = [trial for trial in self.trials if (trial.target_index==idx)];
-        trial_types = sorted(np.unique([round(trial.target_contrast,round_prec) for trial in trials]));
+        trial_types = sorted(pl.unique([round(trial.target_contrast,round_prec) for trial in trials]));
         scores = [[] for i in trial_types];
         for trial in trials:
             for i,trial_type in enumerate(trial_types):
                 if(round(trial.target_contrast,round_prec)==trial_type):
                     scores[i].append(trial.score);
-        ks = np.array([sum(el) for el in scores]);
-        ns = np.array([len(el) for el in scores]);
+        ks = pl.array([sum(el) for el in scores]);
+        ns = pl.array([len(el) for el in scores]);
         xs = trial_types;
         ps = ks/pl.double(ns);
-        return np.array([xs,ks,ns]);
+        return pl.array([xs,ks,ns]);
         
     def plotPerformance(self,idx=None,fixed_slope=None):
         x,k,n = self.computePerformance(idx,round_prec=4);
@@ -253,7 +253,7 @@ class GDBlock():
         x,k,n = self.computePerformance(idx,round_prec=2);
         p = pl.double(k)/n;
         
-        fig = figure();
+        fig = plt.figure();
         if(idx!=None):
             fig.suptitle('Theta = %2.0f deg.'%((idx-1)*45));
         ax1 = fig.add_subplot(2,1,1);
@@ -261,22 +261,22 @@ class GDBlock():
         ax1.plot(x,p,'bo',x,psyWeib(x,thresh,slope),'b-',lw=2.0);
         ax1.set_xlim(0,0.5);
         ax1.xaxis.set_ticklabels([])
-        ax1.set_yticks(linspace(0.4,1.0,4));
+        ax1.set_yticks(pl.linspace(0.4,1.0,4));
         ax1.set_ylim(0.4,1.0);
         ax1.set_ylabel('p(correct)');
         ax1.text(0.38,0.65,r'$\hat{\alpha}$'+' = %2.3f'%thresh);
         ax1.text(0.38,0.58,r'$\hat{\beta}$' +' = %2.2f'%slope);
         ax1.text(0.38,0.51,r'$\hat{\lambda}$' +' = %2.3f'%lapse_rate);
         ax1.text(0.38,0.44,r'$n$' +' = %2.0f'%sum(n));
-        ylim = np.array(ax1.get_ylim());
+        ylim = pl.array(ax1.get_ylim());
         ax1.vlines([thresh,t99],ylim.min(),ylim.max(),colors=['k','0.5'],linestyles='dashed');
         ax1.text(thresh+0.01,0.41,r'$c_{\ 0.82}$' +' = %2.2f'%thresh);
         ax1.text(t99+0.01,0.50,r'$c_{\ 0.99}$' +' = %2.2f'%t99,color='0.5');
         
         ax2.bar(x-0.01,n,0.01);
-        ylim = np.array(ax2.get_ylim());
+        ylim = pl.array(ax2.get_ylim());
         ax2.vlines(thresh,ylim.min(),ylim.max(),colors = 'k',linestyles='dashed');
         ax2.set_xlim(0,0.5);
         ax2.set_ylabel('Contrast freq.');
         ax2.set_xlabel('Target contrast');
-        show();
+        plt.show();
