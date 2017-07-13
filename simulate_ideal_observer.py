@@ -48,33 +48,33 @@ def calculateThresholdFromPC(simulated_block,percent_correct):
 def stdnormpdf(z):
     return SQRT2PI_INV*np.exp(-0.5*z**2);
 
-#c++ version function of posn_likelihood
-def posn_likelihood(obs_pos,mu_pos_idx,sigma_p):
-    return np.squeeze(isd.calculateP_k_i(obs_pos,np.int32(mu_pos_idx),sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO));
-#c++ version function of posn_likelihoods
-def posn_likelihoods(obs_pos,sigma_p,NOISE_TYPE,list_of_indices=None):
-    if(NOISE_TYPE=='notched'):
-        return isd.posn_likelihoods(obs_pos,sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO).T;
-    if(NOISE_TYPE=='pink'):
-        return isd.posn_likelihoods_pink(obs_pos,sigma_p,np.int32(list_of_indices),TARGET_REGION_RADIUS,ASPECT_RATIO).T;
-
-## Non-c++ version of calculateP_k_i. We used c++ version of this function.
-#def calculateP_k_i(obs_pos,mu_pos_idx,sigma_p):
-#    r = TARGET_REGION_RADIUS;
-#    mus = obs_pos-obs_pos[mu_pos_idx];
-#    p_k_i = [];
-#    for mu in mus:
-#        mu_x,mu_y = mu;
-#        x_integral = stats.norm.cdf(r,-mu_x,sigma_p)-stats.norm.cdf(-r,-mu_x,sigma_p);
-#        y_integral = stats.norm.cdf(r,-mu_y,sigma_p)-stats.norm.cdf(-r,-mu_y,sigma_p);
-#        p_xy = x_integral*y_integral;    # since it is 2D gaussian, we need all 3 dimensions
-#        p_k_i.append(p_xy);
-#    p_k_i = np.array(p_k_i);
-#    return p_k_i/np.sum(p_k_i);
-#
-##Non-c++ version function of posn_likelihood
+##c++ version function of posn_likelihood
 #def posn_likelihood(obs_pos,mu_pos_idx,sigma_p):
-#    return np.squeeze(calculateP_k_i(obs_pos,mu_pos_idx,sigma_p));
+#    return np.squeeze(isd.calculateP_k_i(obs_pos,np.int32(mu_pos_idx),sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO));
+##c++ version function of posn_likelihoods
+#def posn_likelihoods(obs_pos,sigma_p,NOISE_TYPE,list_of_indices=None):
+#    if(NOISE_TYPE=='notched'):
+#        return isd.posn_likelihoods(obs_pos,sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO).T;
+#    if(NOISE_TYPE=='pink'):
+#        return isd.posn_likelihoods_pink(obs_pos,sigma_p,np.int32(list_of_indices),TARGET_REGION_RADIUS,ASPECT_RATIO).T;
+
+#Non-c++ version of calculateP_k_i. We used c++ version of this function.
+def calculateP_k_i(obs_pos,mu_pos_idx,sigma_p):
+    r = TARGET_REGION_RADIUS;
+    mus = obs_pos-obs_pos[mu_pos_idx];
+    p_k_i = [];
+    for mu in mus:
+        mu_x,mu_y = mu;
+        x_integral = stats.norm.cdf(r,-mu_x,sigma_p)-stats.norm.cdf(-r,-mu_x,sigma_p);
+        y_integral = stats.norm.cdf(r,-mu_y,sigma_p)-stats.norm.cdf(-r,-mu_y,sigma_p);
+        p_xy = x_integral*y_integral;    # since it is 2D gaussian, we need all 3 dimensions
+        p_k_i.append(p_xy);
+    p_k_i = np.array(p_k_i);
+    return p_k_i/np.sum(p_k_i);
+
+#Non-c++ version function of posn_likelihood
+def posn_likelihood(obs_pos,mu_pos_idx,sigma_p):
+    return np.squeeze(calculateP_k_i(obs_pos,mu_pos_idx,sigma_p));
 
 def findNearestIndex(point,array):
     return np.sqrt(np.sum((array-point)**2,1)).argmin();
@@ -278,10 +278,12 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
     # location [I.e., Eqn. A16 from Michel & Geisler, 2011]
     # i.e., compute 'target present' likelihood ratios and add a singleton dimension to resulting array
     targ_like = (p_W_S/p_W_N)[:,np.newaxis];
-    #Note: I tried using the sum line below when no c++
-    #p_Wt = np.array([np.sum(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i])*targ_like) for i in range(NR_TARG_LOCATIONS)]);
-    #p_Wt = np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]);
-    p_Wt = np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
+    
+    #Note: P_Wt without c++  
+    p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]));
+    #Note: P_Wt with c++
+    #p_Wt = np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
+    
     # Normalize this likelihood so that all values are less than 1.0
     p_Wt = p_Wt/p_Wt.max();
     p_Wts = p_Wt;
@@ -313,10 +315,12 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
             p_W_S = stdnormpdf(dprime*(W-0.5)).clip(TINY,LARGE);
             #  Calculate the likelihood (of W|i) for every timestep and save it in an array
             targ_like = (p_W_S/p_W_N)[:,np.newaxis];
-            #Note: I tried using the sum line below when no c++
-            #p_Wt = np.array([np.sum(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i])*np.squeeze(targ_like)) for i in range(NR_TARG_LOCATIONS)]);            
-            #p_Wt = np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]);
-            p_Wt= np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
+            
+            #Note: P_Wt without c++  
+            p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]));
+            #Note: P_Wt with c++
+            #p_Wt= np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
+
             # Normalize this likelihood so that all values are less than 1.0
             p_Wt = p_Wt/p_Wt.max();
             p_Wts = np.vstack([p_Wts,p_Wt]);
@@ -401,8 +405,12 @@ def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_
     # location [I.e., Eqn. A16 from Michel & Geisler, 2011]
     # i.e., compute 'target present' likelihood ratios and add a singleton dimension to resulting array
     targ_like = (p_W_S/p_W_N)[:,np.newaxis];
-    #p_Wt = np.array([np.sum(posn_likelihood(LOCATIONS,idx,sigma_ps[i])*targ_like) for i,idx in enumerate(list_of_indices)]);
-    p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));
+    
+    #Note: P_Wt without c++  
+    p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(LOCATIONS,idx,sigma_ps[i]),targ_like) for i,idx in enumerate(list_of_indices)]));
+    #Note: P_Wt with c++  
+    #p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));
+    
     # Normalize this likelihood so that all values are less than 1.0
     p_Wt = p_Wt/p_Wt.max();
     p_Wts = p_Wt;
@@ -434,8 +442,12 @@ def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_
             p_W_S = stdnormpdf(dprime*(W-0.5)).clip(TINY,LARGE);
             #  Calculate the likelihood (of W|i) for every timestep and save it in an array
             targ_like = (p_W_S/p_W_N)[:,np.newaxis];
-            #p_Wt = np.array([np.sum(posn_likelihood(LOCATIONS,idx,sigma_ps[i])*targ_like) for i,idx in enumerate(list_of_indices)]);
-            p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));	    
+            
+            #Note: P_Wt without c++  
+            p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(LOCATIONS,idx,sigma_ps[i]),targ_like) for i,idx in enumerate(list_of_indices)]));
+            #Note: P_Wt with c++  
+            #p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));
+            
             # Normalize this likelihood so that all values are less than 1.0
             p_Wt = p_Wt/p_Wt.max();
             p_Wts = np.vstack([p_Wts,p_Wt]);
