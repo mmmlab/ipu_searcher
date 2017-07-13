@@ -1,12 +1,14 @@
 """
 This is the script for Simulation of the Ideal Observer
+
 Authors: Yelda Semizer & Melchi M Michel
 
 STEPS:
 
 # 1. Define paths
 # 2. Load human data
-# 3. Specify the noise type you want to simulate
+# 3. Specify the noise type you want to simulate: notched or pink.
+#    Notched noise corresponds to the uncluttered condition and pink noise corresponds to the cluttered condition
 # 4. Define a cond variable for each noise type
 # 5. Define noise blocks to simulate
 # 6. Define functions to load target locations depending on the block
@@ -32,8 +34,9 @@ print '...starting to load human data...';
 human_blocks = sb.load_block_data(DATA_PATH);
 print '...finished loading human data successfully...';
 
-# 3. Specify the noise type you want to simulate
-NOISE_TYPE = "notched"; #options: notched or pink
+# 3. Specify the noise type you want to simulate: notched or pink
+#    Notched noise corresponds to the uncluttered condition and pink noise corresponds to the cluttered condition
+NOISE_TYPE = "pink";
 
 # 4. Define a cond variable for each noise type
 if(NOISE_TYPE=="notched"): cond = 'nn';

@@ -1,9 +1,10 @@
 """
-This file contains functions for the ideal observer which uses human fixations to complete an overt search task
-The background noise can be either pink or notched. Each background noise type has its own function to simulate a trial.
+This file contains functions for the ideal observer which uses human fixations to complete an overt search task.
+The background noise can be either pink or notched. Each type of background noise type has its own function to simulate a trial.
 
 Authors: Yelda Semizer & Melchi M Michel
 """
+
 import ideal_observer_blocks as id_obs
 import ideal_searcher_dyn_pyublas as isd
 import scipy.stats as stats
@@ -19,7 +20,7 @@ import pyublas
 ############## DEFINE CONSTANTS HERE ###################
 ########################################################
 
-NR_TRIALS_SIMULATED = 1; #number of simulated trials for each human trial
+NR_TRIALS_SIMULATED = 10; #number of simulated trials for each human trial
 PU_PARAMS = [0.09,1e-4]; #to simulate ideal without intrinsic uncertainty set first value from 0.09 to 0.
 SQRT2PI_INV = 1.0/np.sqrt(2.0*mt.pi);
 ASPECT_RATIO = 1.0;
@@ -31,11 +32,11 @@ LARGE = 1.0e100;
 ########################################################
 
 def calculateThresholdFromPC(simulated_block,percent_correct):
-    """
+    '''
     Given a simulated visual search block and a target proportion correct score,
     this method calculates the appropriate threshold criterion, sets the criterion
     for the block and returns the value.
-    """
+    '''
     criterion = opt.brute(lambda u:(simulated_block.percentCorrect(u)-percent_correct)**2,
        np.index_exp[0:1:0.01,])[0];
     criterion = np.clip(criterion,0,1);
@@ -48,43 +49,43 @@ def calculateThresholdFromPC(simulated_block,percent_correct):
 def stdnormpdf(z):
     return SQRT2PI_INV*np.exp(-0.5*z**2);
 
-##c++ version function of posn_likelihood
-#def posn_likelihood(obs_pos,mu_pos_idx,sigma_p):
-#    return np.squeeze(isd.calculateP_k_i(obs_pos,np.int32(mu_pos_idx),sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO));
-##c++ version function of posn_likelihoods
-#def posn_likelihoods(obs_pos,sigma_p,NOISE_TYPE,list_of_indices=None):
-#    if(NOISE_TYPE=='notched'):
-#        return isd.posn_likelihoods(obs_pos,sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO).T;
-#    if(NOISE_TYPE=='pink'):
-#        return isd.posn_likelihoods_pink(obs_pos,sigma_p,np.int32(list_of_indices),TARGET_REGION_RADIUS,ASPECT_RATIO).T;
-
-#Non-c++ version of calculateP_k_i. We used c++ version of this function.
-def calculateP_k_i(obs_pos,mu_pos_idx,sigma_p):
-    r = TARGET_REGION_RADIUS;
-    mus = obs_pos-obs_pos[mu_pos_idx];
-    p_k_i = [];
-    for mu in mus:
-        mu_x,mu_y = mu;
-        x_integral = stats.norm.cdf(r,-mu_x,sigma_p)-stats.norm.cdf(-r,-mu_x,sigma_p);
-        y_integral = stats.norm.cdf(r,-mu_y,sigma_p)-stats.norm.cdf(-r,-mu_y,sigma_p);
-        p_xy = x_integral*y_integral;    # since it is 2D gaussian, we need all 3 dimensions
-        p_k_i.append(p_xy);
-    p_k_i = np.array(p_k_i);
-    return p_k_i/np.sum(p_k_i);
-
-#Non-c++ version function of posn_likelihood
+#c++ version function of posn_likelihood
 def posn_likelihood(obs_pos,mu_pos_idx,sigma_p):
-    return np.squeeze(calculateP_k_i(obs_pos,mu_pos_idx,sigma_p));
+    return np.squeeze(isd.calculateP_k_i(obs_pos,np.int32(mu_pos_idx),sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO));
+#c++ version function of posn_likelihoods
+def posn_likelihoods(obs_pos,sigma_p,NOISE_TYPE,list_of_indices=None):
+    if(NOISE_TYPE=='notched'):
+        return isd.posn_likelihoods(obs_pos,sigma_p,TARGET_REGION_RADIUS,ASPECT_RATIO).T;
+    if(NOISE_TYPE=='pink'):
+        return isd.posn_likelihoods_pink(obs_pos,sigma_p,np.int32(list_of_indices),TARGET_REGION_RADIUS,ASPECT_RATIO).T;
+
+##Non-c++ version of calculateP_k_i. We used c++ version of this function.
+#def calculateP_k_i(obs_pos,mu_pos_idx,sigma_p):
+#    r = TARGET_REGION_RADIUS;
+#    mus = obs_pos-obs_pos[mu_pos_idx];
+#    p_k_i = [];
+#    for mu in mus:
+#        mu_x,mu_y = mu;
+#        x_integral = stats.norm.cdf(r,-mu_x,sigma_p)-stats.norm.cdf(-r,-mu_x,sigma_p);
+#        y_integral = stats.norm.cdf(r,-mu_y,sigma_p)-stats.norm.cdf(-r,-mu_y,sigma_p);
+#        p_xy = x_integral*y_integral;    # since it is 2D gaussian, we need all 3 dimensions
+#        p_k_i.append(p_xy);
+#    p_k_i = np.array(p_k_i);
+#    return p_k_i/np.sum(p_k_i);
+#
+##Non-c++ version function of posn_likelihood
+#def posn_likelihood(obs_pos,mu_pos_idx,sigma_p):
+#    return np.squeeze(calculateP_k_i(obs_pos,mu_pos_idx,sigma_p));
 
 def findNearestIndex(point,array):
     return np.sqrt(np.sum((array-point)**2,1)).argmin();
     
 def dprime_uncertainty_effect(d,k):
-    """
+    '''
     Computes uncertainty effect for a detection task with k possible target locations
     The isolated dprimes at each location are equal to d.
     Returns the resulting dprime.
-    """
+    '''
     k = np.clip(k,1,None); # i.e., k can't have any values less than 1.
     intfunc = lambda x,d,k: stats.norm.cdf(x)**(2*k-1)*stats.norm.pdf(x,d,1.0);
     if(hasattr(d, '__iter__')):
@@ -99,12 +100,12 @@ def dprime_uncertainty_effect(d,k):
     return np.sqrt(2.0)*stats.norm.ppf(np.float64(PC));
 
 def calculateCovariances(current_block,targ_locs,fix_locs):
-    """
+    '''
     # Steps:
     # 1. Specify the value for signal_contrast
     # 2. Calculate target distances(differences) for each possible fixation location
     # 3. Calculate internal noise stdevs from relative distances
-    """
+    '''
     obs = current_block.observer;
     contrast = current_block.signal_contrast;
     target_distances = [np.array(targ_locs-point) for point in fix_locs];
@@ -112,14 +113,14 @@ def calculateCovariances(current_block,targ_locs,fix_locs):
     return np.squeeze(internal_variances);
     
 def generateW(Cov,signal,sigma_p,targ_loc_idx,obs_pos):
-    """
+    '''
     # Steps:
     # 1. Calculate p(k|i) for k in vs_target_locations (requires outside function)
     # 2. select a perturbed location k using p(k|j)
     # 3. Generate W in the normal way
     # 4. Set W[k] to W[i]
     # 5. If k!=i, set W[i] to a new noise sample w~N(-0.5,sqrt(Cov[i]))
-    """
+    '''
     Cov = np.squeeze(Cov);
     ps = np.squeeze(posn_likelihood(obs_pos,targ_loc_idx,sigma_p));
     W = np.random.randn(len(signal))*np.sqrt(Cov)+signal;
@@ -130,19 +131,19 @@ def generateW(Cov,signal,sigma_p,targ_loc_idx,obs_pos):
     return W;
     
 def calculateEffectiveK(sigma_ps,target_radius):
-    """
+    '''
     Computes the location uncertainty in terms of effective number (k) of possible
     signals. 
-    """
+    '''
     sigma_radius = target_radius/np.sqrt(2.0); #based on the disk
     effective_radius = np.sqrt(sigma_ps**2+sigma_radius**2);
     effective_k = (effective_radius/sigma_radius)**2;
     return effective_k;
     
 def calculateSigmaPs(pu_params,targlocs,fixlocs):
-    """
+    '''
     Calculates a matrix of sigma_ps for each target location and fixation location.
-    """
+    '''
     target_distances = np.array([np.sqrt(np.sum((targlocs-point)**2,1)) for point in fixlocs]);
     sigma_ps = np.array([pu_params[0]*loc+pu_params[1] for loc in target_distances]);
     return np.squeeze(sigma_ps);
@@ -152,7 +153,7 @@ def calculateSigmaPs(pu_params,targlocs,fixlocs):
 ########################################################
 
 def simulateDynamicIdealObserver(noise_type,current_block,p_threshold=0.99,targ_locs=None,fix_locs=None,locs=None):
-    """
+    '''
     Current block is a block from human data, targ_locs is an array of possible target locations and fix_locs is
     and array of possible fixation locations 
     p_threshold: if p of MAP is equal or  greater than this value, ideal searcher will decide that target is found. 
@@ -165,7 +166,7 @@ def simulateDynamicIdealObserver(noise_type,current_block,p_threshold=0.99,targ_
     #   5. Compute dprimes, etc.
     #   6. Initialize trials to simulate
     #   7. Calculate the 'matching' criterion for the simulated block
-    """
+    '''
     
     global VS_FIXATION_LOCATIONS,VS_TARGET_LOCATIONS,LOCATIONS,TARGET_REGION_RADIUS,NOISE_TYPE;      
     
@@ -228,7 +229,7 @@ def simulateDynamicIdealObserver(noise_type,current_block,p_threshold=0.99,targ_
 ##################################################################################################
 
 def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_unc_effect,sigma_ps_matrix):
-    """
+    '''
     This function simulates an ideal trial for NOTCHED noise using human fixations
     STEPS:
     #   1. Define target related variables
@@ -238,7 +239,7 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
     #   5. Set up arrays (to store values)
     #   6. Simulate each trial
     #   7.  Save simualted data to a structure 
-    """
+    '''
     
     print '...entering trial...'
     #   1. Define target related variable
@@ -280,9 +281,9 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
     targ_like = (p_W_S/p_W_N)[:,np.newaxis];
     
     #Note: P_Wt without c++  
-    p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]));
+    #p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]));
     #Note: P_Wt with c++
-    #p_Wt = np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
+    p_Wt = np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
     
     # Normalize this likelihood so that all values are less than 1.0
     p_Wt = p_Wt/p_Wt.max();
@@ -317,9 +318,9 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
             targ_like = (p_W_S/p_W_N)[:,np.newaxis];
             
             #Note: P_Wt without c++  
-            p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]));
+            #p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(VS_TARGET_LOCATIONS,i,sigma_ps[i]),targ_like) for i in range(NR_TARG_LOCATIONS)]));
             #Note: P_Wt with c++
-            #p_Wt= np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
+            p_Wt= np.squeeze(np.dot(posn_likelihoods(VS_TARGET_LOCATIONS,sigma_ps,NOISE_TYPE),targ_like)); #for c++
 
             # Normalize this likelihood so that all values are less than 1.0
             p_Wt = p_Wt/p_Wt.max();
@@ -351,8 +352,7 @@ def simulateDynamicIdealTrial(current_trial,covariance_maps,p_threshold,dprime_u
 ##################################################################################################
 
 def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_maps,p_threshold,dprime_unc_effect,sigma_ps_matrix):
-    
-    """
+    '''
     This function simulates an ideal trial for PINK noise using human fixations
     STEPS:
     #   1. Define target related variables
@@ -362,7 +362,7 @@ def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_
     #   5. Set up arrays (to store values)
     #   6. Simulate each trial
     #   7.  Save simualted data to a structure 
-    """
+    '''
     
     print '...entering trial...'
     #   1. Define target related variables 
@@ -407,9 +407,9 @@ def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_
     targ_like = (p_W_S/p_W_N)[:,np.newaxis];
     
     #Note: P_Wt without c++  
-    p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(LOCATIONS,idx,sigma_ps[i]),targ_like) for i,idx in enumerate(list_of_indices)]));
+    #p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(LOCATIONS,idx,sigma_ps[i]),targ_like) for i,idx in enumerate(list_of_indices)]));
     #Note: P_Wt with c++  
-    #p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));
+    p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));
     
     # Normalize this likelihood so that all values are less than 1.0
     p_Wt = p_Wt/p_Wt.max();
@@ -444,9 +444,9 @@ def simulateDynamicIdealTrialPink(current_trial,covariance_maps_pink,covariance_
             targ_like = (p_W_S/p_W_N)[:,np.newaxis];
             
             #Note: P_Wt without c++  
-            p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(LOCATIONS,idx,sigma_ps[i]),targ_like) for i,idx in enumerate(list_of_indices)]));
+            #p_Wt = np.squeeze(np.array([np.dot(posn_likelihood(LOCATIONS,idx,sigma_ps[i]),targ_like) for i,idx in enumerate(list_of_indices)]));
             #Note: P_Wt with c++  
-            #p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));
+            p_Wt = np.squeeze(np.dot(posn_likelihoods(LOCATIONS,sigma_ps,NOISE_TYPE,list_of_indices),targ_like));
             
             # Normalize this likelihood so that all values are less than 1.0
             p_Wt = p_Wt/p_Wt.max();
