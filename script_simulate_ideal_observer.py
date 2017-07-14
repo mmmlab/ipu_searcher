@@ -3,6 +3,12 @@ This is the script for Simulation of the Ideal Observer
 
 Authors: Yelda Semizer & Melchi M Michel
 
+Copyright (C) 2017 by Melchi M. Michel <melchi.michel@rutgers.edu>
+Licensed under GNU General Public License 3.0 or later. 
+Some rights reserved. See COPYING, AUTHORS.
+
+@license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+
 STEPS:
 
 # 1. Define paths
@@ -36,7 +42,7 @@ print '...finished loading human data successfully...';
 
 # 3. Specify the noise type you want to simulate: notched or pink
 #    Notched noise corresponds to the uncluttered condition and pink noise corresponds to the cluttered condition
-NOISE_TYPE = "notched";
+NOISE_TYPE = "pink";
 
 # 4. Define a cond variable for each noise type
 if(NOISE_TYPE=="notched"): cond = 'nn';

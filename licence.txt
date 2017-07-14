@@ -1,0 +1,13 @@
+"""
+
+Authors: Yelda Semizer & Melchi M Michel
+
+Copyright (C) 2017 by Yelda Semizer <yelda.semizer@rutgers.edu> & Melchi M. Michel <melchi.michel@rutgers.edu>
+
+Licensed under GNU General Public License 3.0 or later. 
+
+Some rights reserved. See COPYING, AUTHORS.
+
+@license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+
+"""
