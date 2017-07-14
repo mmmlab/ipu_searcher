@@ -1,6 +1,6 @@
 """
 This file contains function to create a class for human search data
-Authors: Yelda Semizer & Melchi M Michel
+Authors: Yelda Semizer & Melchi M. Michel
 """
 import human_observer as obs
 import numpy as np

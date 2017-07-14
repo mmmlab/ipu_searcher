@@ -1,6 +1,6 @@
 """
 This file contains functions to create a class object for human detection data
-Authors: Yelda Semizer & Melchi M Michel
+Authors: Yelda Semizer & Melchi M. Michel
 """
 import scipy.optimize as opt
 import pylab as pl

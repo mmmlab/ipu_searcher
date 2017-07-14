@@ -1,7 +1,7 @@
 """
 This is the script for Simulation of the Ideal Observer
 
-Authors: Yelda Semizer & Melchi M Michel
+Authors: Yelda Semizer & Melchi M. Michel
 
 Copyright (C) 2017 by Melchi M. Michel <melchi.michel@rutgers.edu>
 Licensed under GNU General Public License 3.0 or later. 

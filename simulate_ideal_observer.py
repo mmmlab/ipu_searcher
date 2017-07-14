@@ -2,7 +2,7 @@
 This file contains functions for the ideal observer which uses human fixations to complete an overt search task.
 The background noise can be either pink or notched. Each type of background noise type has its own function to simulate a trial.
 
-Authors: Yelda Semizer & Melchi M Michel
+Authors: Yelda Semizer & Melchi M. Michel
 """
 
 import ideal_observer_blocks as id_obs

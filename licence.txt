@@ -1,6 +1,6 @@
 """
 
-Authors: Yelda Semizer & Melchi M Michel
+Authors: Yelda Semizer & Melchi M. Michel
 
 Copyright (C) 2017 by Yelda Semizer <yelda.semizer@rutgers.edu> & Melchi M. Michel <melchi.michel@rutgers.edu>
 
