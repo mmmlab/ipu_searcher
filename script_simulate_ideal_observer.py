@@ -36,7 +36,7 @@ print '...finished loading human data successfully...';
 
 # 3. Specify the noise type you want to simulate: notched or pink
 #    Notched noise corresponds to the uncluttered condition and pink noise corresponds to the cluttered condition
-NOISE_TYPE = "pink";
+NOISE_TYPE = "notched";
 
 # 4. Define a cond variable for each noise type
 if(NOISE_TYPE=="notched"): cond = 'nn';
