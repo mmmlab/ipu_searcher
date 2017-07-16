@@ -1,18 +1,10 @@
----
-title: "Instructions on How to Use the Ideal Observer Simulation Code"
+# Instructions on How to Use the Ideal Observer Simulation Code
 
-author: "Yelda Semizer & Melchi M Michel"
-date: "July 14, 2017"
-output:
-  html_document:
-    toc: true
-    theme: united
----
 
 *************
 ### Overview 
 
-This folder contains code to simulate an ideal observer using human fixations in an overt search task.
+This repo contains code to simulate an ideal observer using human fixations in an overt search task.
 
 The ideal observer is limited by human visual sensitivity. It can also be limited by the amount of intrisic position uncertainty.
 
